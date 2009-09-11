@@ -1,0 +1,174 @@
+# http://yappo.ficia.com/pl/album/850F7D50-9EAB-11DE-8946-7BD1A805B909
+use strict;
+use warnings;
+use utf8;
+
+#------------------------------------------------------
+sub 表紙だよ {
+
+
+
+             nginx hacks
+
+
+                          Yappo
+                            Kazuhiro OSAWA
+
+                          YAPC::Asia 2009
+                            2009/09/11 LT
+}
+sub                  昨夜 {
+
+23:13 < tokuhirom______0>
+                    h明日はオチプレゼンあるのかな
+23:13 < lestrrat> オチはないなー
+23:13 < lestrrat> 笑いの人がいない
+23:14 < lestrrat> 
+                 Yappoさんの笑いじゃないよね？ｗ
+
+}
+# メタル小僧
+sub 昨夜 {
+
+
+
+
+  とか言われたので
+  色々考えた結果、zigorouコスプレしてきました。
+
+  あとは真面目です。
+
+
+
+}
+# zigorou画像
+
+
+
+
+
+
+
+
+
+
+
+    I am doing this ZIGOROu's costume play.
+
+
+sub    make to nginx module {
+
+    ngx_http_yappo_moduleとかで
+      簡単にモジュールの作り方
+
+    というか、async serverなんだけど
+      だいぶ apache ぽいまま
+
+    ngx_http_yappo_module.c
+      のコード見ながら解説
+
+
+}
+sub    nginx is Pluggable server {
+
+    ・event loop
+      epoll, aio, kqueue, select, mattn_select
+      , and more
+
+
+    ・protocol
+      http, smtp, pop3, imap
+
+
+}
+sub I try hack to memcached protocol on nginx {
+
+
+# in nginx.conf
+memcached {
+    server {
+        listen 11211;
+    }
+}
+
+
+
+}
+sub     BUT BAD HACK {
+
+
+  ちょっとだけ作って、動かしたが
+    http serverとは別物として動いてしまうので
+    微妙！
+
+  そもそもnginxでやるいみないよね
+    という事でコード消した。
+
+
+
+}
+sub    RETRY! {
+
+  もっと実用的なので、httpコンテンツを
+    memcached protocolで取るようにした
+
+http {
+    server {
+        listen       8082;
+        server_name  localhost;
+        memcached_listen 12345;
+    }
+} # デモ
+}
+sub    ベンチマーク {
+
+  さっきmixiのある人がやったのと被った件
+
+
+         Rate   lwp  memd  curl memdf
+lwp    2841/s    --  -38%  -72%  -86%
+memd   4566/s   61%    --  -55%  -77%
+curl  10204/s  259%  123%    --  -49%
+memdf 20000/s  604%  338%   96%    --
+
+
+}
+sub   ベンチマークつづき {
+
+   WWW::Curl はやすぎっっっっっっっっw
+
+   Cache::Memcached::Fast が速いのは
+     インスタンス使い回し&接続使い回しだから
+
+   keep-alive したらどうなる?
+     ただ、Perlで使えるクライアントが速いだけ?
+
+   そもそもデカイデータとか全部メモリに乗って
+     非効率になるじゃないか。小さいファイル専用?
+}
+sub 最後に {
+
+
+
+
+
+             One more thing...
+
+
+
+
+
+}
+sub     Plack::Impl::Nginx {
+
+  It made in the Remedie talk of miyagawa.
+
+  added patchs to nginx.xs 
+
+  wrote Plack/Imple/Nginx.pm
+
+
+  to DEMO && talk end
+
+
+}

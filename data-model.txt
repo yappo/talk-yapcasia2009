@@ -1,0 +1,705 @@
+# http://yappo.ficia.com/pl/album/1E8DF4EE-9DB6-11DE-B1EE-7BD1A805B909
+use strict;
+use warnings;
+use utf8;
+
+#------------------------------------------------------
+sub 表紙だよ {
+
+
+
+
+          Key Value Store with O/R Mapper
+
+
+                              Yappo
+                                Kazuhiro OSAWA
+
+                              YAPC::Asia 2009
+                                2009/09/10 16:10
+}
+#------------------------------------------------------
+sub 概要 {
+
+
+
+              いま何かと注目されてる
+           KVSとORMを組み合わせてみる話と
+       Data::Modelのチュートリアル等を行います。
+    DBICはまた違ったKVS重視のORMの世界をご堪能あれ。
+
+
+
+
+
+}
+#------------------------------------------------------
+sub Agenda {
+
+
+
+    ・"Summary of Data::Model"
+    ・"Why wasn't Anthor ORM chosen?"
+    ・"Reason Why I made Data::Model"
+    ・"Details of Data::Model"
+    ・"KVS with Data::Model"
+
+
+
+
+}
+#------------------------------------------------------
+sub "Summary of Data::Model 1" {
+
+
+    "Data::Model is .... " =>
+        "ORM"                         =>
+        "like the Data::ObjectDriver" .
+        " and more ORMs"              =>
+        "KVS inclination API"         =>
+        "DRY configuration"           =>
+        "Light Weight"                =>
+        "since Sep, 2009"
+
+# 次からサンプル
+}
+#------------------------------------------------------
+sub "次のページから日本語資料" {
+
+
+
+
+# It is Japanese after the following page ://
+
+
+
+
+
+# next. simple examples.
+}
+#------------------------------------------------------
+sub "スキーマ定義" {
+package UserSchema;
+use strict;
+use warnings;
+use base 'Data::Model';
+use Data::Model::Schema; # install DSL
+install_model user => schema {
+    key 'user_id'; # primary key 指定
+    # カラム設定
+    column qw/ user_id name nickname /;
+}
+
+
+
+}
+#------------------------------------------------------
+sub "スキーマを使ってみるよ" {
+use strict;use warnings;
+use Data::Mode::Driver::DBI; # DBI 使う
+use UserSchema;
+my $model = UserSchema->new;
+$model->set_base_driver(
+    Data::Model::Driver::DBI->new(
+        dsn => 'dbi:SQLite:dbname=foo.db'
+    )
+);
+my $user_row = $model->lookup( user => $user_id );
+say $user_row->nickname;
+say $user_row->name;
+}
+#------------------------------------------------------
+sub "Data::Model基礎知識" {
+
+
+    ・いわゆるORM
+    ・データソースはDBI,Memcached Protocol, Perl Hash,
+      Perl code, Gearman(予定) など
+    ・データソースを RDB 以外も予定してるので Data::*
+    ・Q4M ネィティブ対応
+    ・MySQL, SQLite, PostgreSQL(sfujiwara++ 未merge;;)
+    ・透過キャッシュ
+    ・mixin によるスキーマクラス拡張
+    ・ちょっとナウいイテレータ
+
+}
+#------------------------------------------------------
+sub "こんなイテレータ" {
+
+my $itr = model('User')->get('user');
+while (<$itr>) {
+    say $_->name;
+}
+
+$itr->reset;
+while (my $row = <$itr>) {
+    say $row->name;
+}
+
+# 別にこんなの売りにならんが
+}
+#------------------------------------------------------
+sub "Data::Model基礎知識 + α" {
+
+    1テーブル/1クラスで作るんじゃなくて
+    1データベース/1クラス
+         OR
+    1つのデータのまとまりを1クラスにしててもOK
+
+    install_model (テーブル定義)毎に
+    Driver を変更出来るので、1クラスに複数DSNの
+    テーブルを扱う事も可能。
+    schema 定義は Perl コードで書いて Perl 側で管理。
+    CREATE TABLE する時等は都度 Perl スクリプト叩く。
+# next. なんで 他のえらばなかったの？
+}
+#------------------------------------------------------
+sub  "Why wasn't Anthor ORM chosen?" {"
+
+
+    なぜ他のORMを選ばなかったのか？
+
+    既にCPANには数多のORMがあるが、なぜ作ったのか?
+
+    このあたりの事を次ページ以降、各モジュールを
+    取り上げながら説明しますが、結論から言うと
+    満足する物を自分で作る方が速かったからという事に
+    なってますね。ガハハ
+
+
+"}
+#------------------------------------------------------
+sub "選定基準" {
+
+    昨年の調査時の前あたりから、WebアプリのDBクエリは
+    殆ど Primary Key のインデックス見るだけで事足りる
+    ことが多い。という話がちょくちょく出てました。
+
+    クライアントからの要求を素早く返すには index から
+    レコードを必須である事は半ば常識です。
+
+    そして、 JOIN などを多用すると、いざテーブルを
+    複数の DB Server に分散する時に面倒なので
+    JOIN クエリの吐き易さはあまり考慮しなくて
+    良いだろうという。
+}
+#------------------------------------------------------
+sub "選定基準2" {
+
+    なもんで、だいたい以下の条件で探す事にした。
+
+
+    ・Hackし易い程度の見通しの良いコード
+    ・速い安い旨い
+    ・リレーションシップ(JOIN)は考慮しない
+    ・Schema 定義で楽したい()
+    ・DB以外のデータソースも扱いたい(かも
+    ・Key/Value 厨になれそうな物
+
+
+}
+#------------------------------------------------------
+sub "Class::DBI" {
+
+
+
+    ・実績はあるが古い
+    ・そもそもだいぶ前にDBICに移行する流れになった
+    ・ぶっちゃけ検討すらしてない
+    ・偉大な先輩に敬意です
+
+
+
+
+
+}
+#------------------------------------------------------
+sub "DBIx::Class" {
+
+    ・考えられるかぎり現在のスタンダード
+    ・過去のバージョンのInflateの実装が
+　　　いけてなくて痛い目にあった(最新版は違うぽい)
+    ・C3いやー
+    ・attributesもういやー
+    ・ぶっちゃけ過去に使った時に良い思い出が無かった
+    ・というか DBIC で良ければ素直に使ってるよ
+    ※ この感想は結構古い情報なんで、最新版と異なります
+
+     "transaction scope あたりは Data::Model に採用"
+# さらっと流しますよ
+}
+# DBIC の tree 結果の画像をだす(やっぱいらない
+#------------------------------------------------------
+sub "Rose::DB Jifty::DBI" {
+
+
+    ・Rose::DB はスーパーハッカーの miyagawa さん
+      お気に入りだったが見る時間がとれず。。
+
+    ・Jifty::DBI は Jifty で使わないと旨味ないかな
+      という先入観で使わなかったが
+
+      "DSL 周りは Data::Model で参考にしたので
+      よかった！"
+
+
+}
+#------------------------------------------------------
+sub "Fey::ORM" {
+package Fey::ORM;
+
+use strict;
+use warnings;
+
+our $VERSION = '0.27';
+
+use Moose 0.86 ();
+
+"use Moose...... Moose..."
+# Larry が kan さんに「結ぶ」って名前のORMにしたら?
+# っていってたのを思い出した
+}
+# このスライドの前に
+# http://d.hatena.ne.jp/hatenapr/20090821/1250818212 の
+# 、はてなは高い技術力を誇る会社です。 のキャプション
+#------------------------------------------------------
+sub "DBIx::MoCo" {
+
+    結構時間割いて調べました、はてなは
+    高い技術力を誇る会社です。
+
+    ・cacheのコードが凄いべったり書いてある
+    ・実際のサービスで使っていたコードなので参考になる
+    ・が、見通し悪い。。
+    ・ドキュメント少ない、naoyaさんの資料くらい?
+    ・観測してれば解るけど、CPANの実サービスで使ってる
+      バージョンが乖離しすぎてるから使う気にならず。
+      "inflate周りはアイデアもらいました"
+# see http://d.hatena.ne.jp/yappo/20081023/1224766517
+}
+#------------------------------------------------------
+sub "DBIx::Skinny" {
+
+
+    ・日本の Perl ORM 専門家の作品だが
+    ・そもそもSQLをパースして処理するの大変じゃね？
+      (skinnyのメンテナが)
+    ・なるべくシンプルなSchema構造に対して
+      シンプルなクエリを投げる用途だと
+      生SQLかけます！は魅力じゃなく。。。
+    ・最近見たら結構 Data::Model に近くなってた！
+
+      "でもばっちり参考にして Data::Model 作ったよ"
+# 詳しくは次のセッションで
+}
+#------------------------------------------------------
+sub "Data::ObjectDriver" {
+
+    本当はこれ使いたかったのですが
+    ・意外と test 少ない
+    ・SQL生成部分が微妙に欲しいのとちがた
+    ・document 少ない
+      ぐぐっても nipotan のエントリとか
+      "D::OD に memcached 突っ込んでも生DBIよりおせぇ
+       6A とか CPAN の連中は馬鹿しか居ない！"
+      みたいな日本語情報しかないので辛かった
+
+    "Data::Model の大部分の仕組みは
+     D::OD から頂きました"
+}
+# Data::ObjectDriver の google 検索画面
+#------------------------------------------------------
+sub "Reason Why I made Data::Model" {
+
+    なんで、 Data::Model を作ったの答えは
+
+    既成品に満足しなかったのと
+    Data::ObjectDriver の設計を元に他の ORM で
+    使いたい機能を良い感じに混ぜるのも
+    そこまで大変じゃ無さそうなので作った。
+
+    そして、既存品を調べてくうちに ORM 作成の
+    ポイントも発見出来たので、参入障壁が下がった
+
+
+}
+#------------------------------------------------------
+sub "これであなたもORM作者だ！ORMを作るポイント" {
+
+ORM は、だいたい以下の5コンポーネントがあれば良い。
+
+Schema   => schema 定義を扱う
+Iterator => select した行列を扱う
+Row      => 行毎のオブジェクト ORM の O の部分
+SQL      => オブジェクトで作ったクエリを
+            SQL に変換する処理を担当
+
+DB => DB接続を取り扱う。他の部分で一緒にやるのも可
+
+# see http://d.hatena.ne.jp/yappo/20081029/1225272234
+}
+#------------------------------------------------------
+sub "Details of Data::Model" {
+
+
+
+
+          "ここまで、前座の前座なんですが"
+      "なぜ Data::Model を作ったのかの理由説明に"
+               "気合い入れ素日で図"
+
+
+
+
+
+}
+#------------------------------------------------------
+sub "basic select" {
+
+# lookup
+my $row = $user->lookup( user => $user_id );
+my $row = $user->lookup(user => [$user_id, $sec_idx]);
+my @rows = $user->lookup_multi( user => \@users );
+
+# get (with where IN query)
+my $itr = $user->get(
+ user => { where => { name => { IN => \@x } } } );
+# get (with index)
+my $itr = $user->get(
+ user => { index => { index_name => $key } } );
+}
+#------------------------------------------------------
+sub "basic insert/update/delete" {
+
+# insert
+$user->set( user => $user_id =>
+ { name => 'osawa', nickname => 'yappo', });
+
+# update
+my $row = $user->lookup( user => $user_id );
+$row->nickname( 'hokke' );
+$row->update;
+
+# delte
+$row->delete;
+}
+#------------------------------------------------------
+sub "column sugar" {
+
+
+    ものぐさな人におすすめ！
+
+    え？ものぐさな人は Loader 使って schema 読むよ？
+
+    その DB server にある schema の管理は誰がするの？
+
+    column sugar を使えば使い回しした定義かけるよ！
+
+
+
+}
+#------------------------------------------------------
+sub "column sugar example" {
+
+column_sugar 'user.id' # 定義する
+    => int => {
+        required => 1,
+        unsigned => 1,
+    };
+# user テーブルでの定義
+column 'user.id' => { # ここではカラム名が id になる
+  auto_increment => 1, # auto_increment 属性だけ追加
+};
+# bookmark テーブルでの定義
+column 'user.id'; # ここではカラム名が user_id になる
+}
+#------------------------------------------------------
+sub "alias_colum" {
+
+    カラム定義にエイリアス貼れる
+
+    エイリアス先を inflate するようにしたとすると
+    例えば、バイナリデータをデータベースに
+    格納するカラムがあるとして
+    利用する時には文字列形式とバイナリ形式を
+    使いたい場合に、カラムに
+    エイリアスを張ると両方の形式で利用出来ます。
+
+    エイリアス元や先にデータを入れ直しても
+    お互いちゃんと更新したデータが取れる
+}
+#------------------------------------------------------
+sub "alias_colum example1" {
+
+  columns qw( name nickname );
+  alias_column name     => 'name_name';
+  alias_column nickname => 'nickname_name'
+      => {
+          inflate => sub {
+              Name->new( name => shift );
+          },
+          deflate => sub {
+              shift->name;
+          },
+      };
+}
+#------------------------------------------------------
+sub "alias_colum example2" {
+
+
+$row->nickname;      # 普通に文字列が返る
+$row->nickname_name; # Name オブジェクトが返る
+
+$row->nickname('test');    # 文字列をセット
+$row->nickname_name->name; # test が返る
+
+# オブジェクトをセット
+$row->nickname_name(Name->new( name => 'おうっふ' ));
+$row->name; # おうっふ が返る
+
+}
+#------------------------------------------------------
+sub "CREATE TABLE" {
+
+my $user_model = UserSchema->new;
+# 必要だったら Driver Setup だが UserSchema の
+# なかとかでやらないとめんどいよ
+
+say join("\n", $user_model->as_sqls)
+
+# UserSchema で定義してる table の
+# CREATE TABLE 分が全部表示される
+# sqlite, mysql にあわせた内容で出力
+# 例えば auto_increment とかね
+
+}
+#------------------------------------------------------
+sub "透過キャッシュ (same as a D::OD)" {
+my $fallback_driver = Data::Model::Driver::DBI->new(
+ dsn => 'dbi:mysql:host=localhost:database=test',
+ username        => 'user',
+ password        => 'password',
+);
+my $drv = Data::Model::Driver::Cache::Memcached->new(
+ fallback  => $fallback_driver,
+ memcached => Cache::Memcached::Fast->new({
+  servers => [ { address => "localhost:11211" }, ],
+ })
+);
+base_driver $drv;
+}
+#------------------------------------------------------
+sub "mysql master slave" {
+my $drv = Data::Model::Driver::DBI::MasterSlave->new(
+ master => {
+  dsn => 'dbi:mysql:host=master.server:database=test',
+  username => 'master', password => 'master',
+ },
+ slave  => {
+  dsn => 'dbi:mysql:host=slave.server:database=test',
+  username => 'slave',
+  password => 'slave',
+ },
+);
+base_driver $driver;
+}
+#------------------------------------------------------
+sub Q4M {
+my $retval = $model->queue_running(
+    smtp => sub {
+        my $row = shift;
+        is($row->id, 'foo'); is($row->data, 1);
+    },
+    pop => sub {
+        my $row = shift;
+    },
+    timeout => 10,
+);
+# as a "SELECT * FROM table
+#  WHERE queue_wait('smtp', 'pop', 10)"
+
+}
+#------------------------------------------------------
+sub transaction {
+
+my $tx = $model->tx_scope;
+
+my $row = $tx->lookup( user => $id );
+$row->name('dan');
+$tx->update($row);
+$tx->delete($row);
+
+return unless $x; # rollback
+return $tx->rollback unless $y;
+
+$tx->commit;
+}
+#------------------------------------------------------
+sub "add_method, mixin" {
+
+  row object に対して add_method でメソッド追加可能。
+  $user->bookmark で user の bookmark 取るような
+  リレーションの実装が可能。
+  (なんと Data::Model ではリレーション未サポート)
+
+  mixin は DBIC の ResultSet 拡張的な事が出来る
+  Schema class で
+
+use Data::Model::Mixin modules => ['mixin_module_name']
+
+するだけで使える。 see Data::Model::Mixin::*.pm
+}
+#------------------------------------------------------
+sub "KVS with Data::Model" {
+
+                    "前座おわり"
+
+    Data::Model では KVS をストレージに使った時に
+    データの圧縮を極限まで行えるようなオプションが
+    いくつか搭載されてます。
+
+    ただ、言いたい事はだいたいブログ書いてるので
+
+# http://blog.yappo.jp/yappo/archives/000674.html
+
+    実例やら補足等など
+
+}
+#------------------------------------------------------
+sub "圧縮が必要なわけ" {
+
+    特に TokyoCabinet をストレージに使う KVS 実装は
+    小さいデータを大量に扱う事を得意とするので必要。
+
+    扱うデータ量が膨大になると、圧縮のCPUコストより
+    internal network io/storage server io などの
+    負荷が多くなる。
+
+    そもそもサイズ少ないとキャッシュ乗って
+    より沢山のデータを高速で処理出来る
+
+
+}
+#------------------------------------------------------
+sub "では、どうするか" {
+
+    Data::Model の KVS 対応は Driver::Memached
+    要するに Cache::Memcached* を使う事になる
+
+    これのシリアライズは、標準で Storable を使うが
+    これは、速度は速いがシリアライズの空間効率が
+    悪い事で有名。
+
+    そこで、インタロップのクラウドコン優勝者の
+    id:viver 作の messagepack を採用した。
+    実際は perl バインディングの Data::MessagePack
+}
+# いんたろっぷのポスター画像
+# hirose & furuhashi with IBM
+#------------------------------------------------------
+sub msgpack {
+
+
+    高速でかつメモリ効率の良いシリアライザ
+
+
+    ・7bit以下の数値は1バイト
+    ・16個未満のHASHを表すヘッダが1バイト
+      key/value が 7bit 以下の数値の 16 ペアの HASH が
+      33 バイトで表現可能
+    ・文字列などに関しても可能なかぎり省メモリ
+
+
+}
+# http://d.hatena.ne.jp/viver/20080816/p1 のベンチキャプ
+#------------------------------------------------------
+sub "Data::Modelの戦略" {
+
+    ・カラム名は数値に変換する
+
+    ・primary key は value に含めない
+      これによって key はシリアライザにかからない
+
+    ・テーブル名も任意の短い名前に変換させる
+      $mc->set( 'tablename:key', $value);
+      という形式で memcached に投げるので
+      tablename 部分をより短くさせる
+
+
+}
+#------------------------------------------------------
+sub "全部あわせで" {
+
+$model->set( bookmark => { # bookmark as b
+    user_id     => 1,      # user_id as 1
+    url_id      => 1,      # url_id  as 2
+    bookmark_id => time(), # bookmark_id as 3
+}
+
+このコードで KVS にストアされるのが
+keyの部分で(idの文字数)+2バイト、valueで(Mapの定義が1バイト+カラム名の部分のサイズ合計3バイト+user_idがFixNumなので1バイト+user_idも1バイト+bookmark_atはuint32なので5バイト)バイトの計11バイトで格納出来ます。
+
+
+
+
+}
+#------------------------------------------------------
+sub "KVSにつっこむ利点" {
+
+    KVS の方が原理的には SQL 叩くより速いはず。
+
+    シリアライズされたハッシュオブジェクトなので
+    カラムの追加とかを自由に出来る。
+    ALTER TABLE なんかいらない。
+
+    primary key でしか引けないけど
+      "FriendFeed では MySQL を使いどのようにスキーマレスのデータを保存しているのか"
+    の戦略である程度カバー可能。
+}
+#------------------------------------------------------
+sub "他にもこんな事できる 1" {
+
+
+通常
+CREATE TABLE foo (user_id, num, unique(user_id, num));
+するケースだと、numの数だけuser_idに紐づく行が増える。
+
+だが
+$model->set( foo => $user_id => { nums => \@nums } );
+を可能にする schema にして、Driver::Memcached に
+突っ込と、どんだけnum増えようがuser_idのkey/valのみ
+になる。
+
+}
+# http://d.hatena.ne.jp/naoya/20090804/1249380645
+#------------------------------------------------------
+sub "他にもこんな事できる 2" {
+
+さらに @num の中身が
+[ 100, 170, 270, 370, ]
+の時は、170以降は1バイトで表現出来なくなるが
+inflate/deflate で
+[ 100, 70, 100, 100, ]
+のような差分のリストに前処理すると msgpack の
+空間効率が劇的に上がり易くなる
+
+get する時は、差分リストから復元する
+
+# 参考 http://d.hatena.ne.jp/naoya/20090804/1249380645
+}
+#------------------------------------------------------
+sub "まとめ" {
+
+
+    ・ORMはRDBMS以外とも仲良し
+    ・メモリにキャッシュするだけがKVSじゃない
+    ・MessagePack すごい！すごいぞ！
+      Perl/Python/Ruby バインディングある
+      しストリーミングパーサーとかあって
+      非同期なあの娘も夢中
+    ・Data::Modelをもっと使おう！
+
+
+            ご清聴ありがとうございました
+}
+#------------------------------------------------------
